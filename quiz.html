@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>刷題系統</title>
+  <style>
+    :root {
+      --primary: #4a6cf7;
+      --primary-hover: #3b5bdb;
+      --bg: #f8fafc;
+      --sidebar-bg: #1e293b;
+      --text-main: #334155;
+      --text-light: #64748b;
+      --border: #e2e8f0;
+      --correct: #22c55e;
+      --wrong: #ef4444;
+      --flag: #f59e0b;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei", sans-serif;
+      background: var(--bg);
+      margin: 0;
+      display: flex;
+      height: 100vh;
+      color: var(--text-main);
+    }
+
+    .sidebar {
+      width: 300px;
+      background: var(--sidebar-bg);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    .sidebar-header {
+      padding: 16px 20px;
+      font-size: 18px;
+      font-weight: 700;
+      border-bottom: 1px solid #334155;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 6px;
+    }
+
+    .btn-add {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      transition: 0.2s;
+    }
+
+    .btn-add:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-import {
+      background: #10b981;
+    }
+
+    .btn-import:hover {
+      background: #059669;
+    }
+
+    .sidebar-content {
+      flex: 1;
+      overflow-y: auto;
+      padding-bottom: 20px;
+    }
+
+    .course-group {
+      margin-bottom: 5px;
+    }
+
+    .course-title {
+      padding: 12px 20px;
+      font-size: 15px;
+      font-weight: 600;
+      color: #94a3b8;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f172a;
+    }
+
+    .course-title:hover {
+      color: #e2e8f0;
+    }
+
+    .course-title .arrow {
+      font-size: 12px;
+      transition: 0.2s;
+    }
+
+    .course-title.open .arrow {
+      transform: rotate(90deg);
+    }
+
+    .lesson-list {
+      display: none;
+      padding-left: 10px;
+    }
+
+    .lesson-list.open {
+      display: block;
+    }
+
+    .lesson-item {
+      padding: 10px 20px;
+      font-size: 14px;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      color: #cbd5e1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: 0.15s;
+    }
+
+    .lesson-item:hover {
+      background: #334155;
+      color: #fff;
+    }
+
+    .lesson-item.active {
+      background: #0f172a;
+      color: #60a5fa;
+      border-left-color: #60a5fa;
+      font-weight: 600;
+    }
+
+    .badge {
+      font-size: 11px;
+      background: #334155;
+      padding: 2px 6px;
+      border-radius: 10px;
+      color: #94a3b8;
+    }
+
+    .badge.wrong {
+      background: #7f1d1d;
+      color: #fca5a5;
+    }
+
+    .special-section {
+      border-top: 1px solid #334155;
+      margin-top: 10px;
+      padding-top: 10px;
+    }
+
+    .special-item {
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .special-item:hover {
+      background: #334155;
+    }
+
+    .special-item.active {
+      background: #1e293b;
+      color: #60a5fa;
+    }
+
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .top-bar {
+      background: #fff;
+      padding: 15px 30px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .quiz-info {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .quiz-scroll-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 30px;
+      scroll-behavior: smooth;
+    }
+
+    .question-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      border-left: 4px solid var(--primary);
+      position: relative;
+      transition: 0.3s;
+    }
+
+    .question-card.correct {
+      border-left-color: var(--correct);
+      background: #f0fdf4;
+    }
+
+    .question-card.wrong {
+      border-left-color: var(--wrong);
+      background: #fef2f2;
+    }
+
+    .q-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+      gap: 15px;
+    }
+
+    .q-title {
+      font-weight: 600;
+      line-height: 1.6;
+      font-size: 16px;
+      flex: 1;
+    }
+
+    .q-type {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: #e0e7ff;
+      color: #3730a3;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+
+    .flag-btn {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      filter: grayscale(100%);
+      opacity: 0.4;
+      transition: 0.2s;
+      padding: 0;
+      line-height: 1;
+    }
+
+    .flag-btn:hover {
+      opacity: 0.8;
+      transform: scale(1.1);
+    }
+
+    .flag-btn.active {
+      filter: grayscale(0%);
+      opacity: 1;
+    }
+
+    .option {
+      display: block;
+      padding: 12px 16px;
+      margin: 8px 0;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.15s;
+      background: #fff;
+      font-size: 15px;
+    }
+
+    .option:hover {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+    }
+
+    .option input {
+      margin-right: 12px;
+      cursor: pointer;
+    }
+
+    .option.selected {
+      background: #eff6ff;
+      border-color: var(--primary);
+    }
+
+    .option.correct-answer {
+      background: #dcfce7;
+      border-color: var(--correct);
+      color: #166534;
+      font-weight: 600;
+    }
+
+    .option.wrong-answer {
+      background: #fee2e2;
+      border-color: var(--wrong);
+      color: #991b1b;
+    }
+
+    .feedback {
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      line-height: 1.6;
+      display: none;
+    }
+
+    .feedback.show {
+      display: block;
+    }
+
+    .feedback.ok {
+      background: #f0fdf4;
+      color: #166534;
+      border-left: 3px solid var(--correct);
+    }
+
+    .feedback.bad {
+      background: #fef2f2;
+      color: #991b1b;
+      border-left: 3px solid var(--wrong);
+    }
+
+    .feedback .answer {
+      font-weight: 700;
+    }
+
+    .btn-confirm {
+      display: none;
+      margin-top: 12px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 8px 20px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+
+    .btn-confirm:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-confirm.show {
+      display: inline-block;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal-content {
+      background: #fff;
+      width: 600px;
+      max-width: 90%;
+      max-height: 90vh;
+      border-radius: 12px;
+      padding: 24px;
+      overflow-y: auto;
+    }
+
+    .modal-content h2 {
+      margin-top: 0;
+      font-size: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 5px;
+      font-size: 14px;
+    }
+
+    .form-group input[type="text"],
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 14px;
+    }
+
+    .form-group textarea {
+      height: 80px;
+      resize: vertical;
+    }
+
+    .form-group textarea.code-area {
+      height: 250px;
+      font-family: monospace;
+      font-size: 13px;
+      background: #1e293b;
+      color: #e2e8f0;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: var(--text-light);
+      margin-top: 50px;
+      font-size: 15px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <span>📚 題庫</span>
+      <div class="btn-group">
+        <button class="btn-add" onclick="openAddModal()">+ 新增</button>
+        <button class="btn-add btn-import" onclick="openImportModal()">📥 匯入</button>
+      </div>
+    </div>
+    <div class="sidebar-content">
+      <div id="sidebar-menu"></div>
+      <div class="special-section">
+        <div class="special-item" id="nav-wrong" onclick="loadSpecialView('wrong')">❌ 錯題本 <span class="badge"
+            id="count-wrong">0</span></div>
+        <div class="special-item" id="nav-flag" onclick="loadSpecialView('flag')">🚩 收藏夾 <span class="badge"
+            id="count-flag">0</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="top-bar">
+      <div class="quiz-info" id="current-lesson-title">請從左側選擇</div>
+    </div>
+    <div class="quiz-scroll-area" id="quiz-container">
+      <div class="empty-state">👈 點擊左側選單開始刷題</div>
+    </div>
+  </div>
+
+  <!-- 新增單題 Modal -->
+  <div class="modal-overlay" id="add-modal">
+    <div class="modal-content">
+      <h2>✨ 新增題目</h2>
+      <div class="form-group">
+        <label>選擇課程與章節</label>
+        <select id="add-lesson-select">
+          <option value="new">+ 建立新章節</option>
+        </select>
+      </div>
+      <div id="new-lesson-inputs"
+        style="display:none; background:#f1f5f9; padding:15px; border-radius:8px; margin-bottom:15px;">
+        <div class="form-group"><label>課程名稱</label><input type="text" id="add-course-name" value="AIH5571 Intro to AI">
+        </div>
+        <div class="form-group"><label>章節名稱</label><input type="text" id="add-lesson-name" placeholder="例如：L09"></div>
+      </div>
+      <div class="form-group">
+        <label>題目類型</label>
+        <select id="add-q-type">
+          <option value="single">單選題</option>
+          <option value="multiple">多選題</option>
+        </select>
+      </div>
+      <div class="form-group"><label>題目內容</label><textarea id="add-q-text"></textarea></div>
+      <div id="options-container">
+        <div class="form-group"><label>選項 A</label><input type="text" class="opt-input" data-letter="A"></div>
+        <div class="form-group"><label>選項 B</label><input type="text" class="opt-input" data-letter="B"></div>
+        <div class="form-group"><label>選項 C</label><input type="text" class="opt-input" data-letter="C"></div>
+        <div class="form-group"><label>選項 D</label><input type="text" class="opt-input" data-letter="D"></div>
+      </div>
+      <button type="button" onclick="addOptionField()"
+        style="background:none; border:1px dashed #cbd5e1; padding:8px; width:100%; border-radius:6px; margin-bottom:15px; cursor:pointer;">+
+        新增選項</button>
+      <div class="form-group"><label>正確答案 (如 B 或 A,C)</label><input type="text" id="add-q-answer"></div>
+      <div class="form-group"><label>解析 (選填)</label><textarea id="add-q-exp"></textarea></div>
+      <div class="modal-actions">
+        <button class="btn-add" style="background:#cbd5e1; color:#334155;" onclick="closeModal('add-modal')">取消</button>
+        <button class="btn-add" onclick="saveQuestion()">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 匯入 Modal -->
+  <div class="modal-overlay" id="import-modal">
+    <div class="modal-content">
+      <h2>📥 批量匯入</h2>
+      <div class="form-group">
+        <label>匯入模式</label>
+        <select id="import-mode" onchange="toggleImportMode()">
+          <option value="append">附加到現有章節</option>
+          <option value="new">建立新章節</option>
+        </select>
+      </div>
+      <div id="import-append-section">
+        <div class="form-group"><label>選擇目標章節</label><select id="import-lesson-select"></select></div>
+      </div>
+      <div id="import-new-section"
+        style="display:none; background:#f1f5f9; padding:15px; border-radius:8px; margin-bottom:15px;">
+        <div class="form-group"><label>課程名稱</label><input type="text" id="import-course-name"
+            value="AIH5571 Intro to AI"></div>
+        <div class="form-group"><label>章節名稱</label><input type="text" id="import-lesson-name" placeholder="例如：L09">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>貼上 JSON 數組</label>
+        <textarea id="import-json" class="code-area"
+          placeholder='[ { "type": "single", "question": "...", "options": ["A","B","C","D"], "answer": ["A"] } ]'></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-add" style="background:#cbd5e1; color:#334155;"
+          onclick="closeModal('import-modal')">取消</button>
+        <button class="btn-add btn-import" onclick="importQuestions()">開始匯入</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 簡化版：只保留修正後的題庫加載與邏輯
+    const defaultDB = [{ "course": "AIH5571 Intro to AI", "lessons": [{ "id": "L04", "title": "L04 Intro to GenAI Platforms", "questions": [{ "id": "L04-1", "type": "single", "question": "According to the lecture, what is a GenAI platform?", "options": ["A raw foundation language model trained on web-scale data.", "The place where users interact with GenAI to turn an idea or prompt into an output.", "A deterministic sequence of linked processing steps.", "A programming language used to train neural networks."], "answer": ["B"], "explanation": "Page 4: The place where users interact with GenAI to turn an idea or prompt into an output." }, { "id": "L04-2", "type": "single", "question": "In the 'Model vs Platform vs Workflow' analogy, which of the following best describes a 'Workflow'?", "options": ["The AI engine that predicts and generates content (e.g., GPT).", "The place where users access AI models and use features (e.g., ChatGPT).", "The step-by-step process combining AI platforms and human judgement to complete a task.", "A user interface such as a chat box or design workspace."], "answer": ["C"], "explanation": "Page 5: Workflow is the step-by-step process people use to combine AI platforms and human judgement." }, { "id": "L04-3", "type": "single", "question": "Which analogy correctly matches the concept with its real-world equivalent?", "options": ["Model = Car, Platform = Engine, Workflow = Journey", "Model = Engine, Platform = Car, Workflow = Journey", "Model = Journey, Platform = Engine, Workflow = Car", "Model = Car, Platform = Journey, Workflow = Engine"], "answer": ["B"], "explanation": "Page 6: The model is the engine, the platform is the car, the workflow is the journey." }, { "id": "L04-4", "type": "single", "question": "What is required to access the PolyU GenAI App?", "options": ["A credit card for subscription.", "A GitHub account.", "A NetID for sign-in.", "A local installation of Python 3."], "answer": ["C"], "explanation": "Page 8: Sign in with your NetID." }, { "id": "L04-5", "type": "single", "question": "What is the main point of the 'Tokens Per Generation' activity?", "options": ["To prove that all models use exactly the same number of tokens.", "To observe how token usage can vary across models and word limits with the same prompt.", "To train a new LLM from scratch.", "To convert audio into spectrograms."], "answer": ["B"], "explanation": "Page 10-11: Select two different models and observe the token usage with the same prompt; with word limit." }, { "id": "L04-6", "type": "multiple", "question": "Which of the following are examples of what we can do with GenAI, according to the lecture?", "options": ["Think and Plan", "Generate Text, Images, Audio and Video", "Create a website and a game", "Physically repair hardware and sensors"], "answer": ["A", "B", "C"], "explanation": "Page 13: Think and Plan, Generate Text/Images/Audio/Video, Search/Analysis/Research, Understand Speech/Image, Create website/game." }, { "id": "L04-7", "type": "single", "question": "In Activity L4.3c (Xiqu promotion), what criteria should be used to evaluate the AI-generated ideas?", "options": ["Feasibility and suitability.", "Token efficiency and temperature.", "Spectrogram accuracy and MIDI sequencing.", "Cross-border transfer restrictions."], "answer": ["A"], "explanation": "Page 16: Which idea is more feasible and suitable?" }, { "id": "L04-8", "type": "single", "question": "In the marketing text generation activity, what key risk should you pay attention to when AI invents details?", "options": ["Format drift in JSON output.", "Hallucinations (AI inventing non-existent details).", "Cross-border data transfer restrictions.", "The mathematical impossibility of unlearning."], "answer": ["B"], "explanation": "Page 17: Think about what detail did AI invent? This relates to hallucinations." }, { "id": "L04-9", "type": "single", "question": "When generating a food menu visual with text using GenAI, what common limitation should you observe?", "options": ["The model refuses to generate any images.", "The model may produce wrong wordings or spelling errors on the menu.", "The model will automatically translate everything into Cantonese.", "The model requires a 5-second audio sample."], "answer": ["B"], "explanation": "Page 19: Observe any wrong wordings on the menu." }, { "id": "L04-10", "type": "single", "question": "In the three parts of a simple website, which technology is responsible for 'Behaviour and interaction'?", "options": ["HTML", "CSS", "JavaScript", "JSON"], "answer": ["C"], "explanation": "Page 21: JavaScript -> Behaviour and interaction." }, { "id": "L04-11", "type": "single", "question": "Activity L4.7b asks students to create a game related to humanity promotion. This demonstrates which evaluation pillar from L3?", "options": ["Output Quality", "Controllability", "Usability & Economics", "Safety & Ethics"], "answer": ["B"], "explanation": "Page 24: Controllability (user's ability to steer tone and follow constraints)." }, { "id": "L04-12", "type": "single", "question": "Why does the lecture emphasize 'Think and Execute the program carefully' when using GenAI to generate code?", "options": ["Because the generated code might contain errors and must be verified before execution.", "Because Google Colab cannot run Python code.", "Because the model refuses to generate any code.", "Because the code must be exported as a .yml file."], "answer": ["A"], "explanation": "Page 26: Think and Execute the program carefully!" }] }, { "id": "L05", "title": "L05 Prompt Engineering", "questions": [{ "id": "L05-1", "type": "single", "question": "In the recap of L4, which of the following is the correct analogy for 'Prompt'?", "options": ["The Engine", "The Car", "The Journey", "The Steering Wheel & Accelerator"], "answer": ["D"], "explanation": "Page 3: The Prompt (The Steering Wheel & Accelerator)." }, { "id": "L05-2", "type": "single", "question": "Which of the following is NOT a reason why naive prompts fail in real workflows?", "options": ["The illusion of shared context", "Vagueness inviting hallucination", "Format drift", "Deterministic and verifiable outputs"], "answer": ["D"], "explanation": "Page 4-5: Reasons include shared context illusion, vagueness, format drift, non-determinism." }, { "id": "L05-3", "type": "multiple", "question": "What are the core goals of prompt engineering in academic and enterprise use?", "options": ["Determinism", "Grounding", "Token Efficiency", "Increasing entropy in the probability space"], "answer": ["A", "B", "C"], "explanation": "Page 7: Core goals are Determinism, Grounding, Token Efficiency." }, { "id": "L05-4", "type": "single", "question": "In the example of 'Wide & Flat' vs 'Deterministic Output', what happens when prompt constraints are applied?", "options": ["The probability of 'Sure' increases to 18%.", "The probability of the target token (e.g., '{') increases to 99.4%, suppressing irrelevant tokens.", "The model stops generating any output.", "The model switches to a different language automatically."], "answer": ["B"], "explanation": "Page 9: Token: '{' -> 99.4%, 'Sure' -> 0.01%." }, { "id": "L05-5", "type": "single", "question": "According to the 'Lost in the Middle' phenomenon, where should critical instructions be placed to maximize the model's attention?", "options": ["In the middle of a long document.", "At the very beginning or the very end of the input prompt.", "Randomly scattered throughout the document.", "Only in the system prompt, never in the user prompt."], "answer": ["B"], "explanation": "Page 10: Primacy bias (beginning) and Recency bias (end)." }, { "id": "L05-6", "type": "single", "question": "If you want an LLM to perform code extraction and classification tasks with high determinism, which temperature setting is most appropriate?", "options": ["0.0 - 0.2", "0.3 - 0.5", "0.7 - 1.0+", "2.0+"], "answer": ["A"], "explanation": "Page 11: 0.0-0.2 (Low): Deterministic, analytical, code extraction, classification." }, { "id": "L05-7", "type": "single", "question": "In the C-R-E-A-T-E framework, what does the second 'E' (the last letter) stand for?", "options": ["Explicit Task", "Expected Format", "Evaluation", "Embedding"], "answer": ["B"], "explanation": "Page 13: E - Expected Format." }, { "id": "L05-8", "type": "single", "question": "Which of the following is an example of an 'Engineered' Role in the C-R-E-A-T-E framework?", "options": ["'You are a helpful assistant.'", "'Act as a Senior Academic Program Coordinator specializing in student engagement.'", "'Write an announcement.'", "'Return the answer in JSON format.'"], "answer": ["B"], "explanation": "Page 16: Engineered role activates specialized latent knowledge clusters." }, { "id": "L05-9", "type": "single", "question": "According to the 'Pink Elephant' Paradox, what is the recommended way to prevent a model from mentioning a specific topic?", "options": ["Use strong negative rules like 'Do not mention X'.", "Use affirmative boundaries like 'Include ONLY X and Y. Omit all other topics.'", "Repeat the negative instruction multiple times.", "Increase the temperature to 1.0."], "answer": ["B"], "explanation": "Page 19: Recommend affirmative boundaries." }, { "id": "L05-10", "type": "single", "question": "Why are XML-style tags considered 'remarkably precise' as delimiters?", "options": ["Because they are shorter than triple quotes.", "Because frontier models have heavy pre-training on code and markup, enabling unambiguous structural boundaries.", "Because they automatically encrypt the data.", "Because they can only be used in Python scripts."], "answer": ["B"], "explanation": "Page 22: XML tags establish unambiguous structural boundaries due to pre-training on code/markup." }, { "id": "L05-11", "type": "single", "question": "When specifying the Expected Format (the final 'E' in C-R-E-A-T-E), what is the best practice?", "options": ["Just ask for 'a table' or 'some JSON'.", "Provide the exact column names or JSON keys to enforce a strict structural schema.", "Let the model decide the output format freely.", "Request the output in MIDI format."], "answer": ["B"], "explanation": "Page 24: Provide the exact column names or JSON keys." }, { "id": "L05-12", "type": "single", "question": "What is the key difference between Zero-Shot and Few-Shot prompting?", "options": ["Zero-Shot uses 1-5 examples, while Few-Shot uses none.", "Zero-Shot gives only instructions, while Few-Shot provides 1-5 input-output demonstration pairs.", "Zero-Shot is only for images, while Few-Shot is only for text.", "Zero-Shot requires a temperature of 0.0, while Few-Shot requires 1.0."], "answer": ["B"], "explanation": "Page 27: Zero-Shot gives only instruction; Few-Shot provides 1 to 5 input-output demonstration pairs." }, { "id": "L05-13", "type": "single", "question": "When designing Few-Shot exemplars, why should you avoid trivial toy examples like 'Great day! -> Positive'?", "options": ["Because they are too long and waste tokens.", "Because realism over simplicity is important; messy, realistic inputs better mirror production data.", "Because the model cannot understand short sentences.", "Because toy examples violate XML delimiter rules."], "answer": ["B"], "explanation": "Page 28: Realism over Simplicity." }, { "id": "L05-14", "type": "multiple", "question": "Which of the following are common Few-Shot pitfalls discussed in the lecture?", "options": ["Majority Label Bias", "Recency Bias", "Lexical Overfitting", "Balanced Representativeness"], "answer": ["A", "B", "C"], "explanation": "Page 30: Pitfalls: Majority Label Bias, Recency Bias, Lexical Overfitting." }, { "id": "L05-15", "type": "single", "question": "Why do LLMs struggle with multi-step math and logic according to the lecture?", "options": ["Because they have too many parameters.", "Because they do not 'think' before writing; they compute token by token sequentially.", "Because they are trained on too much math data.", "Because they require XML tags for all calculations."], "answer": ["B"], "explanation": "Page 32: Next-Token Prediction Constraint; they compute token by token sequentially." }, { "id": "L05-16", "type": "single", "question": "What is the 'magic phrase' for Zero-Shot Chain-of-Thought (CoT) prompting?", "options": ["'Please answer directly.'", "'Let's think step by step before answering.'", "'Return the answer in JSON format.'", "'You are a helpful assistant.'"], "answer": ["B"], "explanation": "Page 33: Simply appending 'Let's think step by step before answering.'" }, { "id": "L05-17", "type": "single", "question": "In Production CoT (Structured Scratchpad), what is the purpose of using `<thinking>` and `<verdict>` tags?", "options": ["To hide the reasoning from the user.", "To separate the reasoning process from the final structured output, improving verifiability.", "To reduce the token cost of the prompt.", "To translate the output into Cantonese."], "answer": ["B"], "explanation": "Page 34: Show audit steps inside <thinking>, output structured verdict inside <verdict>." }, { "id": "L05-18", "type": "single", "question": "What is the correct pipeline workflow for Least-to-Most prompting?", "options": ["Synthesize -> Validate -> Extract", "Extract -> Validate -> Synthesize", "Validate -> Extract -> Synthesize", "Extract -> Synthesize -> Validate"], "answer": ["B"], "explanation": "Page 35: Extract (抽取) -> Validate (驗證) -> Synthesize (綜合)." }, { "id": "L05-19", "type": "single", "question": "What does the 'Reflection Pattern' (Automated Self-Audit) instruct the model to do?", "options": ["Reflect the user's input back to them.", "Verify its own preliminary output against a strict checklist before finalizing.", "Increase the temperature to encourage creativity.", "Automatically delete any incorrect answers without showing them."], "answer": ["B"], "explanation": "Page 36: Verify its own preliminary output against a strict checklist." }, { "id": "L05-20", "type": "single", "question": "What is a 'Prompt Injection' attack in the context of real-world GenAI applications?", "options": ["Injecting malicious instructions into the input to override or bypass the original system prompt.", "Physically injecting a virus into the AI server's hardware.", "Adding more tokens to the prompt to increase the model's creativity.", "Using XML tags to structure the prompt more precisely."], "answer": ["A"], "explanation": "Page 39: Crafting adversarial instructions that force the model to ignore safety rules." }] }, { "id": "L06", "title": "L06 AI Workflows", "questions": [{ "id": "L06-1", "type": "single", "question": "Which of the following is NOT a bottleneck of 'one-shot' generation using a mega-prompt?", "options": ["Instruction competition and format drift", "Lack of deterministic control (e.g., IF/ELSE, API triggers)", "Modular and verifiable processing steps", "Zero intermediate verification, allowing errors to propagate"], "answer": ["C"], "explanation": "Page 4: The bottlenecks include mega-prompt trap, context pollution, zero intermediate verification, lack of deterministic control." }, { "id": "L06-2", "type": "multiple", "question": "According to the lecture, what are the key differences between a prompt and a workflow?", "options": ["A prompt is a one-off query, while a workflow is a permanent software asset.", "A workflow allows modularity, letting you swap out one model without rewriting the whole pipeline.", "A prompt is always deterministic, while a workflow is non-deterministic.", "A workflow combines LLMs, structured data schemas, logic branches, and external tools."], "answer": ["A", "B", "D"], "explanation": "Page 5-6: Workflow definition and core advantages." }, { "id": "L06-3", "type": "single", "question": "Which structural building block is responsible for splitting execution paths based on a variable (e.g., checking if an inquiry is 'Urgent')?", "options": ["Trigger", "Processing Node", "Conditionals / Routers", "Actions & Output"], "answer": ["C"], "explanation": "Page 10: Conditionals / Routers split execution paths based on variables (IF/ELSE)." }, { "id": "L06-4", "type": "single", "question": "In a prompt chaining workflow, why might Node 1 (Entity Extractor) be set to Temperature 0.0 while Node 3 (Final Synthesizer) is set to Temperature 0.7?", "options": ["To ensure the extraction is deterministic and strict, while the final synthesis is more creative and engaging.", "To save token costs by using a higher temperature for longer outputs.", "To prevent the model from hallucinating during the final synthesis step.", "To make the extraction step more creative and the final output more deterministic."], "answer": ["A"], "explanation": "Page 12: Node 1 Temp 0.0 Deterministic; Node 3 Temp 0.7 Creative/Engaging." }, { "id": "L06-5", "type": "multiple", "question": "Why is Human-in-the-Loop (HITL) considered critical in production workflows?", "options": ["It helps prevent hallucinations.", "It ensures auditability and compliance.", "It completely eliminates the need for code nodes.", "It allows for error interception before final execution."], "answer": ["A", "B", "D"], "explanation": "Page 14: HITL is critical for hallucination prevention, auditability & compliance, error interception." }, { "id": "L06-6", "type": "single", "question": "What is the primary paradigm shift described when moving from a traditional chat interface to a visual workflow canvas?", "options": ["Moving from a directed graph to a single terminal prompt.", "Moving from a black box single thread to a transparent, directed graph of operations.", "Moving from deterministic code to non-deterministic LLM outputs.", "Moving from cloud-based platforms to local self-hosted models."], "answer": ["B"], "explanation": "Page 16: Moving away from a single terminal/chat prompt toward a directed graph of operations." }, { "id": "L06-7", "type": "single", "question": "In a visual workflow structured as a Directed Acyclic Graph (DAG), what do 'Edges' represent?", "options": ["The modular functional blocks that each do one job.", "The input and output data sockets on the boundaries of nodes.", "The wires connecting ports that define execution order and data routes.", "The circular infinite loops that allow for repeated processing."], "answer": ["C"], "explanation": "Page 20: Edges are wires connecting ports that define both execution order and data routes." }, { "id": "L06-8", "type": "single", "question": "Which statement best describes the 'No Shared Memory Illusion' in AI workflows?", "options": ["Downstream nodes automatically inherit the memory of upstream nodes.", "All nodes share a single global memory space provided by the platform.", "Downstream nodes do not automatically know upstream results unless variables are explicitly passed.", "Variables are manually copy-pasted by the user into every node."], "answer": ["C"], "explanation": "Page 21: Downstream nodes do not automatically know what an upstream node computed unless explicitly passed." }, { "id": "L06-9", "type": "single", "question": "According to the lecture, why should math calculations, timestamps, and JSON validation be handled by dedicated Code Nodes rather than LLMs?", "options": ["Because Code Nodes are more creative and engaging.", "Because LLMs are non-deterministic and unreliable for these programmatic tasks.", "Because Code Nodes require fewer tokens to execute.", "Because LLMs cannot process text data at all."], "answer": ["B"], "explanation": "Page 22: LLMs are non-deterministic and unreliable for math, timestamps, and JSON validation." }, { "id": "L06-10", "type": "single", "question": "In the studio interface, what is the purpose of typing `{` or `/` inside a prompt box?", "options": ["To insert a hyperlink to an external website.", "To open the variable picker for injecting upstream data.", "To delete the current node and start over.", "To switch from the visual canvas to a chat interface."], "answer": ["B"], "explanation": "Page 25: Type { or / inside the prompt box to open the Dify Variable Picker." }, { "id": "L06-11", "type": "single", "question": "When creating a new app in Dify for a deterministic batch/API pipeline (like the HK_Lunch_Decider), which App Type should you select?", "options": ["Chatflow", "Workflow", "Agent", "Completion"], "answer": ["B"], "explanation": "Page 30: App Type: Select Workflow (runs as a deterministic batch/API pipeline, not a conversational chat session)." }, { "id": "L06-12", "type": "single", "question": "After successfully building and testing your workflow in Dify, what file format is used when you export the finalized workflow definition file?", "options": [".json", ".csv", ".yml", ".html"], "answer": ["C"], "explanation": "Page 45: Select Export DSL to download the finalized .yml workflow definition file." }] }, { "id": "L07", "title": "L07 More AI Applications", "questions": [{ "id": "L07-1", "type": "single", "question": "Which of the following best describes the evolution of audio AI from legacy speech/MIDI to modern systems?", "options": ["From end-to-end continuous audio generation to rule-based concatenative TTS.", "From fragmented, rule-based generation to end-to-end continuous audio generation using diffusion and transformers.", "From transformer-based generation to MIDI sequencers with uniform duration.", "From robotic pitch to flat tone with separate synths and VSTs."], "answer": ["B"], "explanation": "Page 4: Legacy Speech/MIDI (Rule-Based/Fragmented) -> Modern Latent Audio Diffusion & Transformers (End-to-end continuous audio generation)." }, { "id": "L07-2", "type": "single", "question": "In the context of AI understanding music, what is the role of 'Spectrograms'?", "options": ["They direct the melody and lyrical flow.", "They carve audio directly from noise.", "They translate sound into visual images.", "They separate vocals from instruments."], "answer": ["C"], "explanation": "Page 5: Spectrograms translate sound into visual images." }, { "id": "L07-3", "type": "single", "question": "In the two-layer music prompt paradigm, what does 'Layer 1: Acoustic Timbre' primarily control?", "options": ["The song structure such as [INTRO], [VERSE], and [CHORUS].", "The genre, sub-genre, tempo/BPM, primary instruments, and vocal character.", "The melody and lyrical flow using audio tokens.", "The spectrogram latents and diffusion noise."], "answer": ["B"], "explanation": "Page 7: Layer 1: Acoustic Timbre (The Sound Palette): Genre, sub-genre, tempo/BPM, primary instruments, vocal character." }, { "id": "L07-4", "type": "single", "question": "Which bracketed structural tag is used to indicate the 'core thematic hook' with high dynamic range and full instrumentation?", "options": ["[Intro]", "[Verse 1]", "[Chorus]", "[Outro]"], "answer": ["C"], "explanation": "Page 8: [Chorus] (副歌) -> Core thematic hook, high dynamic range, full instrumentation." }, { "id": "L07-5", "type": "multiple", "question": "Which of the following elements are part of the 'Style String' formula for engineering music prompts?", "options": ["Primary Genre and Sub-Genre", "Tempo/BPM", "Primary Instruments and Vocal Character", "XML-style delimiters"], "answer": ["A", "B", "C"], "explanation": "Page 10: STYLE = Primary Genre + Sub-Genre + Tempo/BPM + Primary Instruments + Vocal Character." }, { "id": "L07-6", "type": "single", "question": "What is the primary capability of the AI music generator 'Suno'?", "options": ["It only generates MIDI notes without vocals.", "It creates complete, studio-quality songs including original lyrics, vocals, and instrumentation.", "It translates sound into spectrogram visual images.", "It provides rule-based concatenative TTS for audiobooks."], "answer": ["B"], "explanation": "Page 14: Create complete, studio-quality songs (including original lyrics, vocals, and instrumentation)." }, { "id": "L07-7", "type": "single", "question": "Why do standard LLMs often fail at literature reviews?", "options": ["They refuse to generate academic citations.", "They guess the next plausible token, leading to fabricated citations, fake publication years, and non-existent DOI links.", "They are unable to read any academic papers.", "They only output XML-style tags."], "answer": ["B"], "explanation": "Page 17: Standard LLMs guess the next plausible token, not verifiable facts. Models fabricate academic citations." }, { "id": "L07-8", "type": "single", "question": "What is the main purpose of querying the arXiv Academic Graph using Python code in this context?", "options": ["To train a new LLM from scratch.", "To generate synthetic academic citations.", "To ground the AI by fetching verifiable, real data from an academic database instead of relying on LLM memory.", "To convert audio into spectrograms."], "answer": ["C"], "explanation": "Page 18: Activity: Querying the arXiv Academic Graph - Grounded AI approach." }, { "id": "L07-9", "type": "single", "question": "What method is suggested for extracting live empirical data (e.g., historical climate tables, admission statistics) from the web?", "options": ["Web Scraping", "Concatenative TTS", "Diffusion modeling", "MIDI sequencing"], "answer": ["A"], "explanation": "Page 19: Web Scraping - Extract the data from web." }, { "id": "L07-10", "type": "single", "question": "When asking an LLM to create data visualizations, what is the recommended best practice?", "options": ["Ask the LLM to generate the image directly.", "Ask the LLM to write executable Matplotlib/Seaborn code.", "Ask the LLM to describe the chart in natural language only.", "Ask the LLM to output the chart as a MIDI file."], "answer": ["B"], "explanation": "Page 21: Don't ask the LLM to create an image directly; ask the LLM to write executable Matplotlib/Seaborn code." }, { "id": "L07-11", "type": "single", "question": "In Dify, what is the purpose of the 'chunk settings' when creating a knowledge base?", "options": ["To translate the document into multiple languages.", "To divide long texts into multiple smaller chunks for preprocessing and structuring.", "To generate audio from the text.", "To export the knowledge base as a .yml file."], "answer": ["B"], "explanation": "Page 24: Configure the chunk settings... long texts are divided into multiple smaller chunks." }, { "id": "L07-12", "type": "single", "question": "What is Gemini Notebook (formerly Google NotebookLM) primarily designed for?", "options": ["Generating MIDI sequences for music production.", "Serving as an AI research assistant based on user-uploaded documents (a typical grounded AI application).", "Scraping the web for live empirical data.", "Creating concatenative TTS for audiobooks."], "answer": ["B"], "explanation": "Page 26: Gemini Notebook Overview (formerly Google NotebookLM)." }] }, { "id": "L08", "title": "L08 Ethical Use of AI", "questions": [{ "id": "L08-1", "type": "single", "question": "In the driverless car accountability dilemma, which entity is responsible for 'perception model, training weights, and computer vision edge-case handling'?", "options": ["The Manufacturer", "The Software Developer", "The Owner / Passenger", "The Other Driver / Environment"], "answer": ["B"], "explanation": "Page 5: B. The Software Developer - Perception model, training weights, computer vision edge-case handling." }, { "id": "L08-2", "type": "single", "question": "In the Generative AI Responsibility Matrix, which real-world entity corresponds to the 'Foundation Model Provider' (e.g., OpenAI, Anthropic, Google)?", "options": ["The Workflow Architect / Developer building in Dify/Python", "The Deployer / Enterprise / Student", "The Manufacturer in the driverless car dilemma", "The Adversarial End-User performing prompt injection"], "answer": ["C"], "explanation": "Page 6: A. The Manufacturer -> The Foundation Model Provider (OpenAI, Anthropic, Google)." }, { "id": "L08-3", "type": "single", "question": "What was the key legal outcome of the Air Canada chatbot case (2024)?", "options": ["The foundation model provider was held liable for the chatbot's bad advice.", "The airline was held liable for its chatbot giving a passenger bad advice.", "The passenger was held liable for over-relying on the chatbot.", "The case was dismissed because AI cannot be sued."], "answer": ["B"], "explanation": "Page 7: Airline held liable for its chatbot giving passenger bad advice." }, { "id": "L08-4", "type": "single", "question": "What does the term 'Moral Crumple Zone' describe in AI governance?", "options": ["A physical safety feature in driverless cars that absorbs impact.", "The phenomenon where human operators are held fully legally liable for systemic automated failures just because they were nominally 'in the loop'.", "A technique to compress deep neural networks for faster inference.", "A legal framework that completely exempts humans from any AI-related liability."], "answer": ["B"], "explanation": "Page 8: Describes how human operators are often held fully legally liable for systemic automated failures simply because they were nominally 'in the loop'." }, { "id": "L08-5", "type": "single", "question": "According to the lecture, when does Human-in-the-Loop (HITL) become a 'trap'?", "options": ["When humans are given unlimited time and full diagnostic context to review AI outputs.", "When humans are forced to blindly rubber-stamp AI outputs with insufficient time, serving as a legal scapegoat.", "When the AI model achieves 100% accuracy and no human review is needed.", "When the workflow uses too many Code Nodes instead of LLM Nodes."], "answer": ["B"], "explanation": "Page 9: If a human reviewer is given only 3 seconds per item... they are merely serving as a legal scapegoat." }, { "id": "L08-6", "type": "multiple", "question": "Which of the following are concrete rules for responsible engineers discussed in the lecture?", "options": ["Meaningful Intervention (never force humans to blindly rubber-stamp outputs)", "Audit Trails (maintain deterministic log records like Dify's Trace Panel)", "Fail-Safe Defaults (build deterministic code boundaries to intercept anomalies)", "Unlimited Automation (remove all human checkpoints to maximize speed)"], "answer": ["A", "B", "C"], "explanation": "Page 10: Concrete Rules: Meaningful Intervention, Audit Trails, Fail-Safe Defaults." }, { "id": "L08-7", "type": "single", "question": "Which of the following is a core source of algorithmic bias mentioned in the lecture?", "options": ["Training datasets that are perfectly balanced across all demographics.", "Representation & Measurement Bias, where training data disproportionately originates from North America, Europe, and English-speaking web domains.", "Using deterministic code nodes instead of LLMs.", "Providing meaningful time and context for human reviewers."], "answer": ["B"], "explanation": "Page 12: Representation & Measurement Bias: Training datasets disproportionately originate from North America, Europe, and English-speaking web domains." }, { "id": "L08-8", "type": "single", "question": "What was the primary issue revealed by the Amazon AI Recruitment Tool case study?", "options": ["The tool was too slow to process job applications.", "The tool showed bias against women and was ultimately scrapped by Amazon.", "The tool refused to use any training data.", "The tool generated fake academic citations."], "answer": ["B"], "explanation": "Page 13: Amazon scraps secret AI recruiting tool that showed bias against women." }, { "id": "L08-9", "type": "single", "question": "Which engineering intervention involves passing a draft output through an independent Judge/Evaluator LLM Node to check for disparate impact or gendered phrasing?", "options": ["Pre-Prompt Data Blindfolding", "Dual-Pass Evaluator Nodes", "Deterministic Fallback & Routing", "Concatenative TTS"], "answer": ["B"], "explanation": "Page 15: Dual-Pass Evaluator Nodes - pass the draft output through an independent Judge/Evaluator LLM Node." }, { "id": "L08-10", "type": "multiple", "question": "Which of the following factors are typically considered as 'Copyright Infringement' rather than 'Fair Use'?", "options": ["Commercial Exploitation", "Massive Reproduction", "Transformative Use", "Market Harm & Substitution"], "answer": ["A", "B", "D"], "explanation": "Page 18: Copyright Infringement: Commercial Exploitation, Massive Reproduction, Market Harm & Substitution." }, { "id": "L08-11", "type": "single", "question": "What is the 'Consumer Chatbot Trap' regarding corporate data leakage?", "options": ["Free consumer chatbots charge hidden fees for API access.", "Standard free web interfaces routinely use chat logs for continuous model retraining by default.", "Consumer chatbots cannot process any text data.", "Consumer chatbots automatically encrypt all user data."], "answer": ["B"], "explanation": "Page 20: Standard free web interfaces routinely use chat logs for continuous model retraining by default." }, { "id": "L08-12", "type": "single", "question": "According to the Hong Kong Personal Data (Privacy) Ordinance (PDPO), which principle states that data cannot be used for a new purpose (such as model training) without explicit, informed consent?", "options": ["Data Protection Principle 1 (Purpose & Manner)", "Data Protection Principle 3 (Use of Data)", "Cross-Border Transfer Restrictions", "The Right to Erasure"], "answer": ["B"], "explanation": "Page 22: Data Protection Principle 3 (Use of Data): Data cannot be used for a new purpose without explicit, informed consent." }, { "id": "L08-13", "type": "single", "question": "What is 'Direct Prompt Injection' (also known as Jailbreaking) in the context of adversarial exploits?", "options": ["A technique to speed up model inference by injecting cache.", "Crafting adversarial instructions (e.g., DAN prompts, roleplay) to force the model to ignore safety rules.", "Injecting SQL code into the model's training database.", "A method to improve the model's accuracy on math problems."], "answer": ["B"], "explanation": "Page 23: Crafting adversarial instructions that force the model to ignore safety rules (e.g., DAN prompts)." }, { "id": "L08-14", "type": "single", "question": "According to the lecture, how much audio sample is required for diffusion models to generate a near-flawless vocal clone?", "options": ["5 seconds", "5 minutes", "1 hour", "24 hours"], "answer": ["A"], "explanation": "Page 24: Diffusion models generating near-flawless vocal clones from a 5-second audio sample." }, { "id": "L08-15", "type": "single", "question": "What did the 'PHP2Shell' case study demonstrate about AI's capabilities?", "options": ["AI can generate complete studio-quality songs.", "AI uncovered critical RCE vulnerabilities affecting 70% of the Internet.", "AI can perfectly clone a voice from 5 seconds of audio.", "AI can write Matplotlib visualization code."], "answer": ["B"], "explanation": "Page 25: PHP2Shell: AI uncovers critical RCE vulnerabilities affecting 70% of the Internet." }, { "id": "L08-16", "type": "single", "question": "Which entity published the 'Ethical Artificial Intelligence Framework' mentioned in the lecture as a policy reference for AI governance?", "options": ["OpenAI", "The Hong Kong Government", "The European Union", "Google DeepMind"], "answer": ["B"], "explanation": "Page 26: Policies and Reference from Hong Kong Government." }] }] }];
+
+    let database = JSON.parse(localStorage.getItem('aih5571_db_v2'));
+    // 檢查暫存中是否有完整的 L4-L8，如果沒有，就用最新預設題庫覆蓋
+    if (!database || !database[0].lessons.find(l => l.id === 'L08')) {
+      database = defaultDB;
+      localStorage.setItem('aih5571_db_v2', JSON.stringify(database));
+    }
+
+    let wrongList = JSON.parse(localStorage.getItem('aih5571_wrong')) || [];
+    let flagList = JSON.parse(localStorage.getItem('aih5571_flag')) || [];
+
+    let currentQuestions = [];
+    let currentView = 'lesson';
+    let currentLessonTitle = "";
+    const letters = ["A", "B", "C", "D", "E", "F", "G", "H"];
+
+    function saveData() {
+      localStorage.setItem('aih5571_db_v2', JSON.stringify(database));
+      localStorage.setItem('aih5571_wrong', JSON.stringify(wrongList));
+      localStorage.setItem('aih5571_flag', JSON.stringify(flagList));
+    }
+
+    function renderSidebar() {
+      const menu = document.getElementById("sidebar-menu");
+      menu.innerHTML = "";
+      database.forEach((course) => {
+        const courseDiv = document.createElement("div");
+        courseDiv.className = "course-group";
+        const titleDiv = document.createElement("div");
+        titleDiv.className = "course-title open";
+        titleDiv.innerHTML = `<span>📁 ${course.course}</span><span class="arrow">▶</span>`;
+        const lessonList = document.createElement("div");
+        lessonList.className = "lesson-list open";
+        titleDiv.onclick = () => { titleDiv.classList.toggle("open"); lessonList.classList.toggle("open"); };
+        course.lessons.forEach((lesson) => {
+          const item = document.createElement("div");
+          item.className = "lesson-item";
+          const wrongCount = lesson.questions.filter(q => wrongList.includes(q.id)).length;
+          const badge = wrongCount > 0 ? `<span class="badge wrong">${wrongCount}</span>` : `<span class="badge">${lesson.questions.length}</span>`;
+          item.innerHTML = `<span>${lesson.title}</span> ${badge}`;
+          item.onclick = () => {
+            document.querySelectorAll(".lesson-item, .special-item").forEach(el => el.classList.remove("active"));
+            item.classList.add("active");
+            loadLesson(lesson);
+          };
+          lessonList.appendChild(item);
+        });
+        courseDiv.appendChild(titleDiv);
+        courseDiv.appendChild(lessonList);
+        menu.appendChild(courseDiv);
+      });
+      document.getElementById("count-wrong").textContent = wrongList.length;
+      document.getElementById("count-flag").textContent = flagList.length;
+      const selects = [document.getElementById("add-lesson-select"), document.getElementById("import-lesson-select")];
+      selects.forEach(select => {
+        if (!select) return;
+        select.innerHTML = select.id === "add-lesson-select" ? `<option value="new">+ 建立新章節</option>` : "";
+        database.forEach(course => {
+          course.lessons.forEach(lesson => {
+            select.innerHTML += `<option value="${lesson.id}">${course.course} - ${lesson.title}</option>`;
+          });
+        });
+      });
+    }
+
+    function loadLesson(lesson) {
+      currentView = 'lesson';
+      currentLessonTitle = lesson.title;
+      currentQuestions = lesson.questions;
+      document.getElementById("current-lesson-title").textContent = currentLessonTitle;
+      renderQuestions();
+    }
+
+    function loadSpecialView(type) {
+      currentView = type;
+      document.querySelectorAll(".lesson-item, .special-item").forEach(el => el.classList.remove("active"));
+      if (type === 'wrong') {
+        document.getElementById("nav-wrong").classList.add("active");
+        currentLessonTitle = "❌ 錯題本 (答對即自動移除)";
+        currentQuestions = [];
+        database.forEach(c => c.lessons.forEach(l => {
+          l.questions.forEach(q => { if (wrongList.includes(q.id)) currentQuestions.push(q); });
+        }));
+      } else if (type === 'flag') {
+        document.getElementById("nav-flag").classList.add("active");
+        currentLessonTitle = "🚩 收藏夾";
+        currentQuestions = [];
+        database.forEach(c => c.lessons.forEach(l => {
+          l.questions.forEach(q => { if (flagList.includes(q.id)) currentQuestions.push(q); });
+        }));
+      }
+      document.getElementById("current-lesson-title").textContent = currentLessonTitle;
+      renderQuestions();
+    }
+
+    function renderQuestions() {
+      const container = document.getElementById("quiz-container");
+      container.innerHTML = "";
+      if (currentQuestions.length === 0) {
+        container.innerHTML = `<div class="empty-state">目前沒有題目。</div>`;
+        return;
+      }
+      currentQuestions.forEach((q, qIndex) => {
+        const isFlagged = flagList.includes(q.id);
+        const card = document.createElement("div");
+        card.className = "question-card";
+        card.id = `q-${q.id}`;
+        const header = document.createElement("div");
+        header.className = "q-header";
+        const typeLabel = q.type === "multiple" ? "多選" : "單選";
+        header.innerHTML = `
+          <div class="q-title">${qIndex + 1}. ${escapeHtml(q.question)} <span class="q-type">${typeLabel}</span></div>
+          <button class="flag-btn ${isFlagged ? 'active' : ''}" onclick="toggleFlag('${q.id}', this)" title="收藏本題">🚩</button>
+        `;
+        card.appendChild(header);
+        q.options.forEach((opt, oIndex) => {
+          const letter = letters[oIndex];
+          const label = document.createElement("label");
+          label.className = "option";
+          label.dataset.letter = letter;
+          const input = document.createElement("input");
+          input.type = q.type === "multiple" ? "checkbox" : "radio";
+          input.name = `q-${q.id}`;
+          input.value = letter;
+          input.addEventListener("change", () => {
+            if (q.type === "single") {
+              handleAnswer(q, card);
+            } else {
+              label.classList.toggle("selected", input.checked);
+              const btnConfirm = card.querySelector(".btn-confirm");
+              const anyChecked = card.querySelectorAll('input:checked').length > 0;
+              btnConfirm.classList.toggle("show", anyChecked);
+            }
+          });
+          label.appendChild(input);
+          label.appendChild(document.createTextNode(`${letter}. ${opt}`));
+          card.appendChild(label);
+        });
+        if (q.type === "multiple") {
+          const btnConfirm = document.createElement("button");
+          btnConfirm.className = "btn-confirm";
+          btnConfirm.textContent = "確定送出";
+          btnConfirm.onclick = () => { handleAnswer(q, card); btnConfirm.classList.remove("show"); };
+          card.appendChild(btnConfirm);
+        }
+        const feedback = document.createElement("div");
+        feedback.className = "feedback";
+        card.appendChild(feedback);
+        container.appendChild(card);
+      });
+    }
+
+    function handleAnswer(q, card) {
+      const selected = Array.from(card.querySelectorAll(`input[name="q-${q.id}"]:checked`)).map(input => input.value).sort();
+      const correct = [...q.answer].sort();
+      if (q.type === "multiple" && selected.length === 0) return;
+      const isCorrect = selected.length === correct.length && selected.every((v, i) => v === correct[i]);
+      card.classList.remove("correct", "wrong");
+      card.querySelectorAll(".option").forEach(el => { el.classList.remove("correct-answer", "wrong-answer", "selected"); });
+      card.querySelectorAll(".option").forEach(optEl => {
+        const letter = optEl.dataset.letter;
+        if (correct.includes(letter)) optEl.classList.add("correct-answer");
+        if (selected.includes(letter) && !correct.includes(letter)) optEl.classList.add("wrong-answer");
+      });
+      const feedback = card.querySelector(".feedback");
+      feedback.className = "feedback show";
+      if (isCorrect) {
+        card.classList.add("correct");
+        feedback.classList.add("ok");
+        feedback.innerHTML = `✅ 正確。答案：${q.answer.join(", ")}`;
+        if (currentView === 'wrong' && wrongList.includes(q.id)) {
+          wrongList = wrongList.filter(id => id !== q.id);
+          saveData();
+          renderSidebar();
+        }
+      } else {
+        card.classList.add("wrong");
+        feedback.classList.add("bad");
+        feedback.innerHTML = `❌ 錯誤。正確答案：${q.answer.join(", ")}`;
+        if (!wrongList.includes(q.id)) {
+          wrongList.push(q.id);
+          saveData();
+          renderSidebar();
+        }
+      }
+      if (q.explanation) {
+        feedback.innerHTML += `<br><span style="font-weight:400;font-size:13px;color:#555;">${escapeHtml(q.explanation)}</span>`;
+      }
+      card.querySelectorAll("input").forEach(input => input.disabled = true);
+      const btn = card.querySelector(".btn-confirm");
+      if (btn) btn.classList.remove("show");
+    }
+
+    function toggleFlag(qId, btn) {
+      if (flagList.includes(qId)) { flagList = flagList.filter(id => id !== qId); btn.classList.remove("active"); }
+      else { flagList.push(qId); btn.classList.add("active"); }
+      saveData();
+      renderSidebar();
+    }
+
+    function openAddModal() { document.getElementById("add-modal").classList.add("show"); }
+    function openImportModal() { document.getElementById("import-modal").classList.add("show"); }
+    function closeModal(id) { document.getElementById(id).classList.remove("show"); }
+
+    document.getElementById("add-lesson-select").addEventListener("change", (e) => {
+      document.getElementById("new-lesson-inputs").style.display = e.target.value === "new" ? "block" : "none";
+    });
+
+    function toggleImportMode() {
+      const mode = document.getElementById("import-mode").value;
+      document.getElementById("import-append-section").style.display = mode === "append" ? "block" : "none";
+      document.getElementById("import-new-section").style.display = mode === "new" ? "block" : "none";
+    }
+
+    function addOptionField() {
+      const container = document.getElementById("options-container");
+      const count = container.querySelectorAll(".form-group").length;
+      if (count >= 8) return alert("最多支援 8 個選項");
+      const letter = letters[count];
+      const div = document.createElement("div");
+      div.className = "form-group";
+      div.innerHTML = `<label>選項 ${letter}</label><input type="text" class="opt-input" data-letter="${letter}">`;
+      container.appendChild(div);
+    }
+
+    function saveQuestion() {
+      const selectVal = document.getElementById("add-lesson-select").value;
+      let targetLesson = null;
+      if (selectVal === "new") {
+        const courseName = document.getElementById("add-course-name").value.trim();
+        const lessonName = document.getElementById("add-lesson-name").value.trim();
+        if (!courseName || !lessonName) return alert("請填寫課程與章節名稱");
+        let course = database.find(c => c.course === courseName);
+        if (!course) { course = { course: courseName, lessons: [] }; database.push(course); }
+        targetLesson = { id: "L_" + Date.now(), title: lessonName, questions: [] };
+        course.lessons.push(targetLesson);
+      } else {
+        database.forEach(c => c.lessons.forEach(l => { if (l.id === selectVal) targetLesson = l; }));
+      }
+      const type = document.getElementById("add-q-type").value;
+      const text = document.getElementById("add-q-text").value.trim();
+      const answerStr = document.getElementById("add-q-answer").value.trim().toUpperCase();
+      const exp = document.getElementById("add-q-exp").value.trim();
+      if (!text || !answerStr) return alert("請填寫題目與答案");
+      const options = [];
+      document.querySelectorAll(".opt-input").forEach(input => { if (input.value.trim() !== "") options.push(input.value.trim()); });
+      if (options.length < 2) return alert("請至少填寫兩個選項");
+      const answer = answerStr.split(",").map(s => s.trim());
+      targetLesson.questions.push({ id: "Q_" + Date.now(), type: type, question: text, options: options, answer: answer, explanation: exp });
+      saveData();
+      renderSidebar();
+      closeModal("add-modal");
+      document.getElementById("add-q-text").value = "";
+      document.getElementById("add-q-answer").value = "";
+      document.getElementById("add-q-exp").value = "";
+      document.querySelectorAll(".opt-input").forEach(i => i.value = "");
+      alert("題目已成功新增！");
+      if (currentView === 'lesson' && currentLessonTitle === targetLesson.title) loadLesson(targetLesson);
+    }
+
+    function importQuestions() {
+      const jsonStr = document.getElementById("import-json").value.trim();
+      if (!jsonStr) return alert("請貼上 JSON 數組");
+      let parsed;
+      try { parsed = JSON.parse(jsonStr); } catch (e) { return alert("JSON 格式錯誤，請檢查語法！\n錯誤訊息：" + e.message); }
+      let questionsToImport = [];
+      let targetLesson = null;
+      if (Array.isArray(parsed)) { questionsToImport = parsed; }
+      else if (parsed.lessons && parsed.lessons[0] && parsed.lessons[0].questions) { questionsToImport = parsed.lessons[0].questions; }
+      else { return alert("無法識別的格式。請貼上題目數組（[ { ... } ]）"); }
+      if (questionsToImport.length === 0) return alert("數組內沒有題目");
+      const mode = document.getElementById("import-mode").value;
+      if (mode === "new") {
+        const courseName = document.getElementById("import-course-name").value.trim();
+        const lessonName = document.getElementById("import-lesson-name").value.trim();
+        if (!courseName || !lessonName) return alert("請填寫新課程與章節名稱");
+        let course = database.find(c => c.course === courseName);
+        if (!course) { course = { course: courseName, lessons: [] }; database.push(course); }
+        targetLesson = { id: "L_" + Date.now(), title: lessonName, questions: [] };
+        course.lessons.push(targetLesson);
+      } else {
+        const lessonId = document.getElementById("import-lesson-select").value;
+        database.forEach(c => c.lessons.forEach(l => { if (l.id === lessonId) targetLesson = l; }));
+        if (!targetLesson) return alert("找不到目標章節");
+      }
+      let addedCount = 0;
+      questionsToImport.forEach((q, index) => {
+        if (!q.question || !q.options || !q.answer) return;
+        targetLesson.questions.push({ id: "Q_" + Date.now() + "_" + index, type: q.type || "single", question: q.question, options: q.options, answer: Array.isArray(q.answer) ? q.answer : [q.answer], explanation: q.explanation || "" });
+        addedCount++;
+      });
+      saveData();
+      renderSidebar();
+      closeModal("import-modal");
+      alert(`成功匯入 ${addedCount} 道題目！`);
+      document.getElementById("import-json").value = "";
+      if (currentView === 'lesson' && currentLessonTitle === targetLesson.title) loadLesson(targetLesson);
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    renderSidebar();
+  </script>
+</body>
+
+</html>
